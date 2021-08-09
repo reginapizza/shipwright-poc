@@ -26,6 +26,7 @@ var (
 	secretName          = "image-registry-secret"
 	contextDir          string
 	imageRegistryServer string
+	serverPort          = 8085
 )
 
 func formHandler(w http.ResponseWriter, r *http.Request) {
@@ -58,8 +59,8 @@ func formHandler(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err)
 		}
 	}
-	dockerSecret := createDockerSecret(username, password, email, imageRegistryServer)
-	_, err := k8sClient.CoreV1().Secrets("default").Create(context.TODO(), dockerSecret, v1.CreateOptions{})
+	dockerSecret, err := createDockerSecret(username, password, email, imageRegistryServer)
+	_, err = k8sClient.CoreV1().Secrets("default").Create(context.TODO(), dockerSecret, v1.CreateOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,14 +115,12 @@ func formHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	prepareCluster()
-
 	fileServer := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fileServer)
 	http.HandleFunc("/form", formHandler)
 
-	fmt.Printf("Starting server at port 8080\n")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	fmt.Printf("Starting server at port %d\n", serverPort)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", serverPort), nil); err != nil {
 		log.Fatal(err)
 	}
 
